@@ -18,7 +18,7 @@ const Support = () => {
   };
 
   const handleEmailSupport = () => {
-    window.location.href = "mailto:redpaycustomerservice@gmail.com";
+    window.location.href = "mailto:redpaydomain@gmail.com";
   };
 
   const handleLiveChat = () => {
