@@ -145,8 +145,8 @@ INSERT INTO public.settings (key, value) VALUES
   ('telegram_url', ''),
   ('referral_bonus_amount', '5000'),
   ('rpc_price', '6700'),
-  ('palmpay_account_number', '8053048212'),
-  ('palmpay_account_name', 'OFORAH MATTHEW'),
+  ('moniepoint_account_number', '6709023538'),
+  ('moniepoint_account_name', 'OFORAH MATTHEW'),
   ('bank_name', 'Palmpay')
 ON CONFLICT (key) DO NOTHING;
 
