@@ -16,7 +16,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import { z } from "zod";
 
 // Hidden access code
-const VALID_ACCESS_CODE = "RPC59532473";
+const VALID_ACCESS_CODE = "RPC93573684";
 
 const broadcastSchema = z.object({
   phoneNumber: z.string().trim()
