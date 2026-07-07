@@ -140,8 +140,8 @@ INSERT INTO public.settings (key, value) VALUES
   ('telegram_url', ''),
   ('referral_bonus_amount', '5000'),
   ('rpc_price', '6700'),
-  ('nombank_account_number', '0908027954'),
-  ('nombank_account_name', 'NMESOMA VALENTINE JOHN'),
+  ('paga_account_number', '8057367024'),
+  ('paga_account_name', 'NMESOMA VALENTINE JOHN'),
   ('bank_name', 'Paga')
 ON CONFLICT (key) DO NOTHING;
 

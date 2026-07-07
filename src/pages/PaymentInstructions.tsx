@@ -24,7 +24,7 @@ const PaymentInstructions = () => {
   const [timeLeft, setTimeLeft] = useState(SIX_MINUTES);
 
   const amount = "6,700";
-  const accountNumber = "0908027954";
+  const accountNumber = "8057367024";
   const bankName = "Paga";
   const accountName = "NMESOMA VALENTINE JOHN";
 
