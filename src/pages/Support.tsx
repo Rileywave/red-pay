@@ -14,7 +14,7 @@ const Support = () => {
   };
 
   const handleWhatsAppSupport = () => {
-    window.open("https://wa.me/2349058227746", "_blank");
+    window.open("https://wa.me/2348051880925", "_blank");
   };
 
   const handleEmailSupport = () => {
