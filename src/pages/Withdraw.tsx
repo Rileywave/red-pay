@@ -245,13 +245,7 @@ const Withdraw = () => {
                 <p className="text-xs text-destructive">⚠️ Access code is required for withdrawal</p>
               </div>
             </div>
-
-            <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
-              <p className="text-xs text-muted-foreground">
-                Once your activation is confirmed, withdrawals are completed manually by our support team.
-                Submit this form, then contact support with your details to receive your payout.
-              </p>
-            </div>
+            
 
             <Button onClick={handleWithdraw} className="w-full" size="lg">
               <DollarSign className="w-4 h-4 mr-2" />
