@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { Card, CardContent } from "@/components/ui/card";
 import LiquidBackground from "@/components/LiquidBackground";
 import Logo from "@/components/Logo";
@@ -37,7 +37,7 @@ const History = () => {
       if (error) {
         console.error('Error fetching transactions:', error);
       } else {
-        setTransactions(data || []);
+        setTransactions((data || []) as any);
       }
       setLoading(false);
     };

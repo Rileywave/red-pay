@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "@/lib/router-compat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import LiquidBackground from "@/components/LiquidBackground";
@@ -41,7 +41,7 @@ const Receipt = () => {
       if (error) {
         console.error('Error fetching transaction:', error);
       } else {
-        setTransaction(data);
+        setTransaction(data as any);
       }
       setLoading(false);
     };

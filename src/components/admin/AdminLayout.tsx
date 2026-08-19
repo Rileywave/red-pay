@@ -1,4 +1,4 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from "@/lib/router-compat";
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { AdminSidebar } from './AdminSidebar';
 import { AdminErrorBoundary } from './AdminErrorBoundary';

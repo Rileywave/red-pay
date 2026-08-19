@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -18,6 +18,8 @@ interface UserProfile {
   last_claim_at: string | null;
   rpc_purchased: boolean;
   rpc_code: string | null;
+  activated?: boolean;
+  activated_at?: string | null;
   profile_image: string | null;
   referral_count: number;
   created_at: string;
@@ -50,24 +52,85 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
+  const profileRequestRef = useRef<Promise<UserProfile | null> | null>(null);
+  const signUpInProgressRef = useRef(false);
+
+  const generateUserId = () => Math.floor(1000000000 + Math.random() * 9000000000).toString();
+
+  const generateReferralCode = (firstName: string, lastName: string) => {
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || 'RP';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.floor(100 + Math.random() * 900);
+    return `${initials}${timestamp}${random}`;
+  };
+
+  const fetchProfile = useCallback(async (authUser: User): Promise<UserProfile | null> => {
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('auth_user_id', userId)
+      .eq('auth_user_id', authUser.id)
       .maybeSingle();
 
     if (error) {
       console.error('Error fetching profile:', error);
       return null;
     }
-    return data;
-  };
+
+    if (data) return data as UserProfile;
+    if (signUpInProgressRef.current) return null;
+
+    // Older or interrupted signups can leave a valid auth account without its
+    // profile row. Recreate the minimum profile so login never dead-ends.
+    const email = authUser.email?.trim() ?? '';
+    const emailName = email.split('@')[0]?.replace(/[^a-zA-Z]/g, '') || 'RedPay';
+    const firstName = String(authUser.user_metadata?.first_name || emailName || 'RedPay');
+    const lastName = String(authUser.user_metadata?.last_name || 'User');
+    const recoveredProfile = {
+      auth_user_id: authUser.id,
+      user_id: generateUserId(),
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      phone: String(authUser.user_metadata?.phone || ''),
+      country: String(authUser.user_metadata?.country || 'nigeria'),
+      referral_code: generateReferralCode(firstName, lastName),
+      referred_by: null,
+      balance: 160000,
+    };
+
+    const { error: insertError } = await supabase.from('users').insert(recoveredProfile);
+    if (insertError && insertError.code !== '23505') {
+      console.error('Error recovering missing profile:', insertError);
+      return null;
+    }
+
+    const { data: recovered, error: recoveryReadError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_user_id', authUser.id)
+      .maybeSingle();
+
+    if (recoveryReadError) {
+      console.error('Error reading recovered profile:', recoveryReadError);
+      return null;
+    }
+    return recovered as UserProfile | null;
+  }, []);
+
+  const loadProfile = useCallback(async (authUser: User) => {
+    if (!profileRequestRef.current) {
+      profileRequestRef.current = fetchProfile(authUser).finally(() => {
+        profileRequestRef.current = null;
+      });
+    }
+    const profileData = await profileRequestRef.current;
+    setProfile(profileData);
+    return profileData;
+  }, [fetchProfile]);
 
   const refreshProfile = async () => {
     if (user) {
-      const profileData = await fetchProfile(user.id);
-      setProfile(profileData);
+      await loadProfile(user);
     }
   };
 
@@ -82,7 +145,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem('authToken');
       }
       if (session?.user) {
-        fetchProfile(session.user.id).then(setProfile);
+        void loadProfile(session.user);
       }
       setLoading(false);
     });
@@ -100,8 +163,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       // Defer any additional Supabase calls to avoid deadlocks
       if (session?.user) {
+        const sessionUser = session.user;
         setTimeout(() => {
-          fetchProfile(session.user!.id).then(setProfile);
+          void loadProfile(sessionUser);
         }, 0);
       } else {
         setProfile(null);
@@ -110,18 +174,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadProfile]);
 
   const signUp = async (data: SignUpData) => {
+    signUpInProgressRef.current = true;
     try {
       // Generate unique IDs
-      const userId = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+      const userId = generateUserId();
       
       // Generate unique referral code using initials + timestamp + random
-      const initials = (data.firstName[0] + data.lastName[0]).toUpperCase();
-      const timestamp = Date.now().toString().slice(-6);
-      const random = Math.floor(100 + Math.random() * 900);
-      const referralCode = `${initials}${timestamp}${random}`;
+      const referralCode = generateReferralCode(data.firstName, data.lastName);
 
       // Sign up with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -129,16 +191,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         password: data.password,
         options: {
           emailRedirectTo: `${window.location.origin}/dashboard`,
+          data: {
+            first_name: data.firstName,
+            last_name: data.lastName,
+            phone: data.phone,
+            country: data.country,
+          },
         },
       });
 
       if (authError) return { error: authError };
       if (!authData.user) return { error: new Error('No user returned') };
 
+      // The profile insert is protected by row-level security, so we need an
+      // active session before writing. Sign in if signUp didn't return one.
+      if (!authData.session) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
+        if (signInError) return { error: signInError };
+      }
+
       const storedRefCode = localStorage.getItem('referral_code');
       const referralSource = storedRefCode || data.referredBy || null;
 
-      // Create user profile WITHOUT referred_by - let edge function handle it
+      // Create user profile; referral link is applied server-side below
       const { error: profileError } = await supabase.from('users').insert({
         auth_user_id: authData.user.id,
         user_id: userId,
@@ -148,43 +226,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         phone: data.phone,
         country: data.country,
         referral_code: referralCode,
-        referred_by: null, // Edge function will set this
+        referred_by: null,
         balance: 160000,
       });
 
       if (profileError) return { error: profileError };
 
-      // Call server-side edge function to credit referral atomically
-      if (referralSource) {
-        console.log('🎯 ReferralCapture: Calling server to apply referral code:', referralSource);
-        
-        try {
-          const { data: creditResult, error: creditError } = await supabase.functions.invoke('credit-referral', {
-            body: {
-              new_user_id: userId,
-              new_user_email: data.email,
-              referral_code: referralSource
-            }
-          });
+      signUpInProgressRef.current = false;
 
-          if (creditError) {
-            console.error('❌ ReferralError: Failed to call credit function:', creditError);
-          } else if (creditResult?.credited) {
-            console.log('✅ ReferralCredited: Referral bonus applied successfully', creditResult);
-          } else {
-            console.warn('⚠️ ReferralNotCredited:', creditResult?.reason || 'Unknown reason', creditResult);
-          }
-        } catch (error) {
-          console.error('❌ ReferralError: Exception calling credit function:', error);
-        }
-        
-        // Always clear the stored referral code after attempting to apply it
+      // Record a pending referral — the bonus is credited when an admin
+      // confirms the new user's activation payment.
+      if (referralSource) {
+        const { error: refError } = await supabase.rpc('apply_referral' as any, {
+          _new_user_id: userId,
+          _referral_code: referralSource,
+        } as any);
+        if (refError) console.error('Referral link failed:', refError);
         if (storedRefCode) localStorage.removeItem('referral_code');
       }
 
+      await loadProfile(authData.user);
+
       return { error: null };
+
     } catch (error) {
       return { error };
+    } finally {
+      signUpInProgressRef.current = false;
     }
   };
 

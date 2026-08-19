@@ -57,10 +57,10 @@ export function NotificationSetup({ userId }: NotificationSetupProps) {
         .from('push_subscriptions')
         .upsert({
           user_id: userId,
-          fcm_token: JSON.stringify(subscription),
-          platform: 'web',
+          endpoint: (subscription as any).endpoint,
+          subscription: JSON.parse(JSON.stringify(subscription)),
         }, {
-          onConflict: 'user_id,fcm_token'
+          onConflict: 'endpoint'
         });
 
       if (error) throw error;

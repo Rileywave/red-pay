@@ -10,166 +10,137 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.15"
   }
   public: {
     Tables: {
+      activation_requests: {
+        Row: {
+          account_number: string | null
+          admin_note: string | null
+          amount: number
+          auth_user_id: string | null
+          bank: string | null
+          created_at: string
+          email: string | null
+          id: string
+          phone: string | null
+          proof_image: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rpc_code_used: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          admin_note?: string | null
+          amount?: number
+          auth_user_id?: string | null
+          bank?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          proof_image?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rpc_code_used?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          admin_note?: string | null
+          amount?: number
+          auth_user_id?: string | null
+          bank?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          proof_image?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rpc_code_used?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
           admin_user_id: string
-          created_at: string | null
-          details: Json | null
+          created_at: string
+          details: Json
           id: string
           target_user_id: string | null
         }
         Insert: {
           action_type: string
           admin_user_id: string
-          created_at?: string | null
-          details?: Json | null
+          created_at?: string
+          details?: Json
           id?: string
           target_user_id?: string | null
         }
         Update: {
           action_type?: string
           admin_user_id?: string
-          created_at?: string | null
-          details?: Json | null
+          created_at?: string
+          details?: Json
           id?: string
           target_user_id?: string | null
         }
         Relationships: []
       }
-      push_campaigns: {
-        Row: {
-          admin_user_id: string
-          body: string
-          created_at: string | null
-          id: string
-          target_criteria: Json | null
-          title: string
-        }
-        Insert: {
-          admin_user_id: string
-          body: string
-          created_at?: string | null
-          id?: string
-          target_criteria?: Json | null
-          title: string
-        }
-        Update: {
-          admin_user_id?: string
-          body?: string
-          created_at?: string | null
-          id?: string
-          target_criteria?: Json | null
-          title?: string
-        }
-        Relationships: []
-      }
-      push_notification_logs: {
-        Row: {
-          clicked_at: string | null
-          created_at: string | null
-          delivered_at: string | null
-          error_message: string | null
-          id: string
-          notification_id: string
-          sent_at: string | null
-          status: string
-          user_id: string
-        }
-        Insert: {
-          clicked_at?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          error_message?: string | null
-          id?: string
-          notification_id: string
-          sent_at?: string | null
-          status?: string
-          user_id: string
-        }
-        Update: {
-          clicked_at?: string | null
-          created_at?: string | null
-          delivered_at?: string | null
-          error_message?: string | null
-          id?: string
-          notification_id?: string
-          sent_at?: string | null
-          status?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "push_notification_logs_notification_id_fkey"
-            columns: ["notification_id"]
-            isOneToOne: false
-            referencedRelation: "push_notifications"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       push_notifications: {
         Row: {
           body: string
-          click_count: number | null
-          created_at: string | null
-          created_by: string
+          created_at: string
+          created_by: string | null
           cta_url: string | null
-          data_payload: Json | null
-          delivered_count: number | null
-          failed_count: number | null
+          delivered_count: number
+          failed_count: number
           id: string
-          image_url: string | null
-          repeat_type: string | null
-          schedule_at: string | null
           sent_at: string | null
-          sent_count: number | null
-          status: string | null
-          target_criteria: Json | null
+          sent_count: number
+          status: string
           target_type: string
           title: string
         }
         Insert: {
           body: string
-          click_count?: number | null
-          created_at?: string | null
-          created_by: string
+          created_at?: string
+          created_by?: string | null
           cta_url?: string | null
-          data_payload?: Json | null
-          delivered_count?: number | null
-          failed_count?: number | null
+          delivered_count?: number
+          failed_count?: number
           id?: string
-          image_url?: string | null
-          repeat_type?: string | null
-          schedule_at?: string | null
           sent_at?: string | null
-          sent_count?: number | null
-          status?: string | null
-          target_criteria?: Json | null
+          sent_count?: number
+          status?: string
           target_type?: string
           title: string
         }
         Update: {
           body?: string
-          click_count?: number | null
-          created_at?: string | null
-          created_by?: string
+          created_at?: string
+          created_by?: string | null
           cta_url?: string | null
-          data_payload?: Json | null
-          delivered_count?: number | null
-          failed_count?: number | null
+          delivered_count?: number
+          failed_count?: number
           id?: string
-          image_url?: string | null
-          repeat_type?: string | null
-          schedule_at?: string | null
           sent_at?: string | null
-          sent_count?: number | null
-          status?: string | null
-          target_criteria?: Json | null
+          sent_count?: number
+          status?: string
           target_type?: string
           title?: string
         }
@@ -177,35 +148,33 @@ export type Database = {
       }
       push_subscriptions: {
         Row: {
-          created_at: string | null
-          fcm_token: string
+          auth: string | null
+          created_at: string
+          endpoint: string
           id: string
-          platform: string | null
-          user_id: string
+          p256dh: string | null
+          subscription: Json | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string | null
-          fcm_token: string
+          auth?: string | null
+          created_at?: string
+          endpoint: string
           id?: string
-          platform?: string | null
-          user_id: string
+          p256dh?: string | null
+          subscription?: Json | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string | null
-          fcm_token?: string
+          auth?: string | null
+          created_at?: string
+          endpoint?: string
           id?: string
-          platform?: string | null
-          user_id?: string
+          p256dh?: string | null
+          subscription?: Json | null
+          user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "push_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       referrals: {
         Row: {
@@ -215,10 +184,9 @@ export type Database = {
           date: string | null
           id: string
           manual_credit_notes: string | null
-          manually_credited: boolean | null
           new_user_id: string
           referrer_id: string
-          status: string | null
+          status: string
         }
         Insert: {
           amount_given?: number | null
@@ -227,10 +195,9 @@ export type Database = {
           date?: string | null
           id?: string
           manual_credit_notes?: string | null
-          manually_credited?: boolean | null
           new_user_id: string
           referrer_id: string
-          status?: string | null
+          status?: string
         }
         Update: {
           amount_given?: number | null
@@ -239,10 +206,9 @@ export type Database = {
           date?: string | null
           id?: string
           manual_credit_notes?: string | null
-          manually_credited?: boolean | null
           new_user_id?: string
           referrer_id?: string
-          status?: string | null
+          status?: string
         }
         Relationships: [
           {
@@ -263,6 +229,7 @@ export type Database = {
       }
       rpc_purchases: {
         Row: {
+          admin_note: string | null
           created_at: string | null
           date: string | null
           email: string
@@ -270,12 +237,14 @@ export type Database = {
           phone: string
           proof_image: string | null
           rpc_code_issued: string | null
+          status: string
           user_id: string
           user_name: string
           user_unique_id: string
           verified: boolean | null
         }
         Insert: {
+          admin_note?: string | null
           created_at?: string | null
           date?: string | null
           email: string
@@ -283,12 +252,14 @@ export type Database = {
           phone: string
           proof_image?: string | null
           rpc_code_issued?: string | null
+          status?: string
           user_id: string
           user_name: string
           user_unique_id: string
           verified?: boolean | null
         }
         Update: {
+          admin_note?: string | null
           created_at?: string | null
           date?: string | null
           email?: string
@@ -296,6 +267,7 @@ export type Database = {
           phone?: string
           proof_image?: string | null
           rpc_code_issued?: string | null
+          status?: string
           user_id?: string
           user_name?: string
           user_unique_id?: string
@@ -331,53 +303,6 @@ export type Database = {
           value?: string
         }
         Relationships: []
-      }
-      support_requests: {
-        Row: {
-          admin_notes: string | null
-          created_at: string | null
-          id: string
-          message: string
-          priority: string
-          resolved_at: string | null
-          status: string
-          subject: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          admin_notes?: string | null
-          created_at?: string | null
-          id?: string
-          message: string
-          priority?: string
-          resolved_at?: string | null
-          status?: string
-          subject: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          admin_notes?: string | null
-          created_at?: string | null
-          id?: string
-          message?: string
-          priority?: string
-          resolved_at?: string | null
-          status?: string
-          subject?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_support_user"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["user_id"]
-          },
-        ]
       }
       transactions: {
         Row: {
@@ -435,42 +360,21 @@ export type Database = {
           },
         ]
       }
-      user_notification_preferences: {
-        Row: {
-          created_at: string | null
-          id: string
-          push_enabled: boolean | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          push_enabled?: boolean | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          push_enabled?: boolean | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       user_roles: {
         Row: {
+          created_at: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          created_at?: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
@@ -479,6 +383,8 @@ export type Database = {
       }
       users: {
         Row: {
+          activated: boolean
+          activated_at: string | null
           auth_user_id: string | null
           balance: number | null
           country: string
@@ -499,6 +405,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activated?: boolean
+          activated_at?: string | null
           auth_user_id?: string | null
           balance?: number | null
           country: string
@@ -519,6 +427,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activated?: boolean
+          activated_at?: string | null
           auth_user_id?: string | null
           balance?: number | null
           country?: string
@@ -540,14 +450,75 @@ export type Database = {
         }
         Relationships: []
       }
+      withdrawal_requests: {
+        Row: {
+          account_name: string
+          account_number: string
+          admin_note: string | null
+          amount: number
+          bank: string
+          created_at: string
+          email: string | null
+          id: string
+          phone: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rpc_code_used: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          admin_note?: string | null
+          amount: number
+          bank: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rpc_code_used?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          admin_note?: string | null
+          amount?: number
+          bank?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          phone?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rpc_code_used?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      apply_referral: {
+        Args: { _new_user_id: string; _referral_code: string }
+        Returns: undefined
+      }
       confirm_referral: {
-        Args: { _amount?: number; _new_user_id: string }
-        Returns: Json
+        Args: { _amount: number; _new_user_id: string }
+        Returns: undefined
       }
       has_role: {
         Args: {
@@ -556,7 +527,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"

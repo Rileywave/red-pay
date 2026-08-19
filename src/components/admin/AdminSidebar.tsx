@@ -5,10 +5,13 @@ import {
   Receipt, 
   Bell, 
   FileText,
+  Banknote,
+  ShieldCheck,
   LogOut
 } from 'lucide-react';
+
 import { NavLink } from '@/components/NavLink';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from "@/lib/router-compat";
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import {
   Sidebar,
@@ -27,6 +30,8 @@ const menuItems = [
   { title: 'Dashboard', url: '/admin/dashboard', icon: LayoutDashboard },
   { title: 'Referrals', url: '/admin/referrals', icon: Users },
   { title: 'Payments', url: '/admin/payments', icon: CreditCard },
+  { title: 'Activations', url: '/admin/activations', icon: ShieldCheck },
+  { title: 'Withdrawals', url: '/admin/withdrawals', icon: Banknote },
   { title: 'Transactions', url: '/admin/transactions', icon: Receipt },
   { title: 'Send Push', url: '/admin/push', icon: Bell },
   { title: 'Notification Stats', url: '/admin/notifications', icon: Bell },

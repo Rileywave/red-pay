@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "@/lib/router-compat";
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import adminLogo from '@/assets/admin-logo.png';
+import { claimAdminRole } from '@/lib/admin-setup.functions';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState('');
@@ -92,9 +93,16 @@ export default function AdminLogin() {
       }
 
       if (!roleData) {
-        await supabase.auth.signOut();
-        toast.error('Access denied. Admin privileges required.');
-        return;
+        // The pre-approved admin email can self-grant its role server-side.
+        const granted = await claimAdminRole()
+          .then((r: any) => !!r?.granted)
+          .catch(() => false);
+
+        if (!granted) {
+          await supabase.auth.signOut();
+          toast.error('Access denied. Admin privileges required.');
+          return;
+        }
       }
 
       toast.success('Login successful');

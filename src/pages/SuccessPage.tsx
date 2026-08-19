@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "@/lib/router-compat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import LiquidBackground from "@/components/LiquidBackground";
@@ -103,11 +103,11 @@ const SuccessPage = () => {
             )}
 
             <Button 
-              onClick={() => navigate("/dashboard")} 
+              onClick={() => navigate("/activate")} 
               className="w-full" 
               size="lg"
             >
-              Go to Dashboard
+              Activate your account
             </Button>
           </CardContent>
         </Card>

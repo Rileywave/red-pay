@@ -16,7 +16,7 @@ import {
   Send,
   MessageCircle,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "@/lib/router-compat";
 import { toast } from "sonner";
 import advert1 from "@/assets/advert-1.png";
 import advert2 from "@/assets/advert-2.png";
@@ -28,7 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const TELEGRAM_CHANNEL_URL = "https://t.me/TeamRedPay";
 
 const Dashboard = () => {
-  const { profile, refreshProfile, signOut } = useAuth();
+  const { user, profile, loading, refreshProfile, signOut } = useAuth();
   const navigate = useNavigate();
   const [nextClaimAt, setNextClaimAt] = useState<Date | null>(null);
   const [timeLeft, setTimeLeft] = useState("");
@@ -37,6 +37,17 @@ const Dashboard = () => {
   const [videoLink, setVideoLink] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [showTelegramBanner, setShowTelegramBanner] = useState(true);
+
+  // Don't hang on the skeleton forever if the profile never arrives
+  useEffect(() => {
+    if (loading || !user || profile) return;
+    const t = setTimeout(() => setLoadError(true), 12000);
+    return () => clearTimeout(t);
+  }, [loading, user, profile]);
+
+  useEffect(() => {
+    if (!loading && !user) navigate("/");
+  }, [loading, user, navigate]);
 
   useEffect(() => {
     if (profile?.last_claim_at) {
@@ -182,7 +193,7 @@ const Dashboard = () => {
   ], []);
 
   // Loading skeleton while profile loads
-  if (!profile && !loadError) {
+  if (loading || (!profile && !loadError)) {
     return (
       <div className="min-h-screen w-full relative">
         <LiquidBackground />
@@ -305,6 +316,29 @@ const Dashboard = () => {
             Video
           </Button>
         </div>
+
+        {/* RPC Code Card — visible once admin approves the payment */}
+        {profile?.rpc_purchased && profile?.rpc_code && (
+          <Card className="bg-card/60 backdrop-blur-sm border-primary/40 animate-fade-in">
+            <CardContent className="p-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground">Your RPC Code</p>
+                <p className="text-lg font-bold font-mono text-primary tracking-wider">{profile.rpc_code}</p>
+                <p className="text-xs text-muted-foreground">Use this code to enable your withdrawal.</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(profile.rpc_code!);
+                  toast.success("RPC code copied");
+                }}
+              >
+                Copy
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Balance Card */}
         <Card className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 border-primary shadow-glow animate-fade-in float-element">

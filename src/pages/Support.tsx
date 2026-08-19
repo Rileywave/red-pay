@@ -18,7 +18,7 @@ const Support = () => {
   };
 
   const handleEmailSupport = () => {
-    window.location.href = "mailto:redpaydomain@gmail.com";
+    window.location.href = "mailto:redpaywebservice@gmail.com";
   };
 
   const handleLiveChat = () => {
@@ -65,6 +65,10 @@ const Support = () => {
                 <p className="text-sm text-muted-foreground">
                   Chat with us on Telegram
                 </p>
+                <div className="flex items-center gap-2 mt-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <span className="text-sm text-emerald-500">Online Now</span>
+                </div>
               </div>
               <Button
                 onClick={handleTelegramSupport}

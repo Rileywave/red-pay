@@ -15,6 +15,7 @@ interface Payment {
   phone: string;
   proof_image: string | null;
   verified: boolean;
+  status: string | null;
   rpc_code_issued: string | null;
   created_at: string;
 }
@@ -24,6 +25,28 @@ export default function AdminPayments() {
   const [loading, setLoading] = useState(true);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofLoading, setProofLoading] = useState(false);
+
+  const openProof = async (payment: Payment) => {
+    const raw = payment.proof_image;
+    if (!raw) return;
+    if (raw.startsWith('http')) {
+      setProofUrl(raw);
+      return;
+    }
+    setProofLoading(true);
+    const { data, error } = await supabase.storage
+      .from('payment-proofs')
+      .createSignedUrl(raw, 600);
+    setProofLoading(false);
+    if (error || !data?.signedUrl) {
+      toast.error(error?.message || 'Could not open proof');
+      return;
+    }
+    setProofUrl(data.signedUrl);
+  };
 
   useEffect(() => {
     fetchPayments();
@@ -37,7 +60,7 @@ export default function AdminPayments() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPayments(data || []);
+      setPayments((data || []) as any);
     } catch (error: any) {
       toast.error('Failed to load payments');
       console.error(error);
@@ -47,23 +70,28 @@ export default function AdminPayments() {
   };
 
   const handleAction = async () => {
-    if (!selectedPayment || !actionType) return;
+    if (!selectedPayment || !actionType || submitting) return;
+    setSubmitting(true);
 
     try {
       if (actionType === 'approve') {
-        // Generate RPC code
-        const rpcCode = 'RPC2242535';
-        
+        // Generate a unique RPC code for this user
+        const rpcCode = `RPC${Math.floor(1000000 + Math.random() * 9000000)}`;
+
         // Update payment
-        const { error: updateError } = await supabase
+        const { data: updated, error: updateError } = await supabase
           .from('rpc_purchases')
-          .update({ 
-            verified: true, 
-            rpc_code_issued: rpcCode 
-          })
-          .eq('id', selectedPayment.id);
+          .update({
+            verified: true,
+            status: 'approved',
+            rpc_code_issued: rpcCode,
+          } as any)
+          .eq('id', selectedPayment.id)
+          .select('id');
 
         if (updateError) throw updateError;
+        if (!updated?.length) throw new Error('Update blocked — admin permissions missing');
+
 
         // Update user's rpc_purchased status
         const { error: userError } = await supabase
@@ -87,6 +115,7 @@ export default function AdminPayments() {
         if (referralData) {
           await supabase.rpc('confirm_referral', {
             _new_user_id: selectedPayment.user_id,
+            _amount: referralData.amount_given ?? 5000,
           });
         }
 
@@ -94,7 +123,7 @@ export default function AdminPayments() {
         await supabase
           .from('audit_logs')
           .insert({
-            admin_user_id: (await supabase.auth.getUser()).data.user?.id,
+            admin_user_id: (await supabase.auth.getUser()).data.user!.id,
             action_type: 'payment_approved',
             details: { payment_id: selectedPayment.id, rpc_code: rpcCode },
           });
@@ -102,17 +131,20 @@ export default function AdminPayments() {
         toast.success('Payment approved successfully');
       } else {
         // Reject payment
-        const { error } = await supabase
+        const { data: rejected, error } = await supabase
           .from('rpc_purchases')
-          .update({ verified: false })
-          .eq('id', selectedPayment.id);
+          .update({ verified: false, status: 'rejected' } as any)
+          .eq('id', selectedPayment.id)
+          .select('id');
 
         if (error) throw error;
+        if (!rejected?.length) throw new Error('Update blocked — admin permissions missing');
+
 
         await supabase
           .from('audit_logs')
           .insert({
-            admin_user_id: (await supabase.auth.getUser()).data.user?.id,
+            admin_user_id: (await supabase.auth.getUser()).data.user!.id,
             action_type: 'payment_rejected',
             details: { payment_id: selectedPayment.id },
           });
@@ -125,6 +157,8 @@ export default function AdminPayments() {
       fetchPayments();
     } catch (error: any) {
       toast.error(error.message || 'Action failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -151,6 +185,7 @@ export default function AdminPayments() {
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Activation code</TableHead>
               <TableHead>Proof</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Actions</TableHead>
@@ -163,24 +198,55 @@ export default function AdminPayments() {
                 <TableCell>{payment.email}</TableCell>
                 <TableCell>{payment.phone}</TableCell>
                 <TableCell>
-                  <Badge variant={payment.verified ? 'default' : 'secondary'}>
-                    {payment.verified ? 'Verified' : 'Pending'}
-                  </Badge>
+                  {(() => {
+                    const status = payment.status ?? (payment.verified ? 'approved' : 'pending');
+                    return (
+                      <Badge
+                        variant={
+                          status === 'approved' ? 'default' : status === 'rejected' ? 'destructive' : 'secondary'
+                        }
+                      >
+                        {status === 'approved' ? 'Verified' : status === 'rejected' ? 'Rejected' : 'Pending'}
+                      </Badge>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
-                  {payment.proof_image && (
+                  {payment.rpc_code_issued ? (
+                    <button
+                      type="button"
+                      className="text-xs bg-muted px-2 py-1 rounded font-mono hover:bg-muted/70"
+                      title="Click to copy"
+                      onClick={() => {
+                        navigator.clipboard.writeText(payment.rpc_code_issued!);
+                        toast.success('Activation code copied');
+                      }}
+                    >
+                      {payment.rpc_code_issued}
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {payment.proof_image ? (
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(payment.proof_image!, '_blank')}
+                      disabled={proofLoading}
+                      onClick={() => openProof(payment)}
                     >
-                      <ExternalLink className="h-4 w-4" />
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      View
                     </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No proof</span>
                   )}
                 </TableCell>
+
                 <TableCell>{new Date(payment.created_at).toLocaleDateString()}</TableCell>
                 <TableCell>
-                  {!payment.verified && (
+                  {(payment.status ?? (payment.verified ? 'approved' : 'pending')) === 'pending' && (
                     <div className="flex gap-2">
                       <Button
                         size="sm"
@@ -229,9 +295,29 @@ export default function AdminPayments() {
             <Button 
               variant={actionType === 'approve' ? 'default' : 'destructive'}
               onClick={handleAction}
+              disabled={submitting}
             >
-              Confirm
+              {submitting ? 'Working…' : 'Confirm'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!proofUrl} onOpenChange={(open) => !open && setProofUrl(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Payment Proof</DialogTitle>
+            <DialogDescription>Screenshot uploaded by the user.</DialogDescription>
+          </DialogHeader>
+          {proofUrl && (
+            <img src={proofUrl} alt="Payment proof" className="w-full rounded-lg" />
+          )}
+          <DialogFooter>
+            {proofUrl && (
+              <a href={proofUrl} target="_blank" rel="noreferrer" className="text-sm underline">
+                Open full size
+              </a>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

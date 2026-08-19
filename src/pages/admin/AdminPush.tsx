@@ -76,7 +76,7 @@ export default function AdminPush() {
       await supabase
         .from('audit_logs')
         .insert({
-          admin_user_id: adminUser.data.user?.id,
+          admin_user_id: adminUser.data.user!.id,
           action_type: 'push_notification_sent',
           details: { 
             notification_id: notification.id,

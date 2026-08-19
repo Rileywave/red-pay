@@ -102,7 +102,7 @@ export default function AdminReferrals() {
         await supabase
           .from('audit_logs')
           .insert({
-            admin_user_id: (await supabase.auth.getUser()).data.user?.id,
+            admin_user_id: (await supabase.auth.getUser()).data.user!.id,
             action_type: 'manual_referral_credit',
             details: { referral_id: selectedReferral.id, notes },
           });

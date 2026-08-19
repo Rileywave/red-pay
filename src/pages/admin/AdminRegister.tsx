@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "@/lib/router-compat";
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import adminLogo from '@/assets/admin-logo.png';
+import { claimAdminRole } from '@/lib/admin-setup.functions';
 
-const ADMIN_EMAIL = 'redpaydomain@gmail.com';
+const ADMIN_EMAIL = 'redpaywebservice@gmail.com';
 const ADMIN_PASSWORD = 'Chinemerem2007';
 
 export default function AdminRegister() {
@@ -27,8 +28,9 @@ export default function AdminRegister() {
       });
 
       if (existingUser.user) {
-        toast.success('Account already exists! Redirecting to login...');
-        setTimeout(() => navigate('/admin/login'), 1500);
+        await claimAdminRole().catch(() => undefined);
+        toast.success('Account ready! Redirecting to dashboard...');
+        setTimeout(() => navigate('/admin/dashboard'), 1200);
         return;
       }
     } catch (existError) {
@@ -62,20 +64,20 @@ export default function AdminRegister() {
         setRegistered(true);
         toast.success('Admin account created successfully!');
         
-        // Wait a moment for the trigger to assign admin role
         setTimeout(async () => {
-          // Try to sign in immediately
+          // Ensure a session, then grant the admin role server-side
           const { error: signInError } = await supabase.auth.signInWithPassword({
             email: ADMIN_EMAIL,
             password: ADMIN_PASSWORD,
           });
 
           if (!signInError) {
+            await claimAdminRole().catch(() => undefined);
             navigate('/admin/dashboard');
           } else {
             navigate('/admin/login');
           }
-        }, 2000);
+        }, 1200);
       }
     } catch (error: any) {
       console.error('Registration error:', error);

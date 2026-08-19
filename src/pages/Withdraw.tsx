@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "@/lib/router-compat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 
-// Hidden access code
-const VALID_ACCESS_CODE = "RPC93573684";
+// The valid RPC code is the one issued to this user once an admin confirms their payment.
+
 
 const withdrawSchema = z.object({
   accountNumber: z.string().trim()
@@ -34,7 +34,7 @@ const withdrawSchema = z.object({
 
 const Withdraw = () => {
   const navigate = useNavigate();
-  const { profile, refreshProfile } = useAuth();
+  const { profile, user, loading: authLoading, refreshProfile } = useAuth();
   const [formData, setFormData] = useState({
     accountNumber: "",
     accountName: "",
@@ -56,6 +56,13 @@ const Withdraw = () => {
       return;
     }
 
+    // Withdrawal is only unlocked once an admin confirms the RPC payment
+    if (!profile.rpc_purchased || !profile.rpc_code) {
+      toast.error("Your RPC payment is not confirmed yet. Please buy and wait for admin confirmation.");
+      navigate("/buyrpc");
+      return;
+    }
+
     // Validate form data with Zod
     const validation = withdrawSchema.safeParse(formData);
     if (!validation.success) {
@@ -64,12 +71,12 @@ const Withdraw = () => {
       return;
     }
 
-    // Validate access code against hardcoded value
-    if (formData.accessCode !== VALID_ACCESS_CODE) {
-      toast.error("Invalid Access Code. Please purchase an access code to proceed.");
-      navigate("/buy-rpc");
+    // Validate access code against the code issued to this user
+    if (formData.accessCode !== profile.rpc_code.toUpperCase()) {
+      toast.error("Invalid RPC Code. Please enter the code issued after your payment was confirmed.");
       return;
     }
+
 
     const withdrawAmount = parseInt(formData.amount);
 
@@ -79,48 +86,47 @@ const Withdraw = () => {
       return;
     }
 
+    // Log the request so admins can process the payout manually
     setLoading(true);
-    try {
-      const newBalance = (profile.balance || 0) - withdrawAmount;
-      
-      // Update user balance
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ balance: newBalance })
-        .eq('user_id', profile.user_id);
+    const { error } = await supabase.from("withdrawal_requests" as any).insert({
+      user_id: user?.id,
+      user_name: `${profile.first_name ?? ""} ${profile.last_name ?? ""}`.trim(),
+      email: profile.email,
+      phone: profile.phone,
+      bank: formData.bank,
+      account_number: formData.accountNumber,
+      account_name: formData.accountName,
+      amount: withdrawAmount,
+      rpc_code_used: profile.rpc_code,
+    } as any);
+    setLoading(false);
 
-      if (updateError) throw updateError;
-
-      // Create transaction record
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: profile.user_id,
-          title: 'Withdrawal',
-          amount: -withdrawAmount,
-          type: 'debit',
-          transaction_id: `WD-${Date.now()}`,
-          balance_before: profile.balance || 0,
-          balance_after: newBalance,
-          meta: {
-            account_number: formData.accountNumber,
-            account_name: formData.accountName,
-            bank: formData.bank
-          }
-        });
-
-      if (transactionError) throw transactionError;
-
-      await refreshProfile();
-      toast.success("Withdrawal processed successfully!");
-      navigate(`/success?type=withdraw&amount=${withdrawAmount.toLocaleString()}`);
-    } catch (error: any) {
-      console.error('Error processing withdrawal:', error);
-      toast.error(error.message || "Failed to process withdrawal");
-    } finally {
-      setLoading(false);
+    if (error) {
+      toast.error("Could not submit your withdrawal request. Please try again.");
+      return;
     }
+
+    // Debit the wallet and record the transaction
+    const balanceBefore = profile.balance || 0;
+    const balanceAfter = balanceBefore - withdrawAmount;
+
+    await supabase.from("users").update({ balance: balanceAfter }).eq("user_id", profile.user_id);
+    await supabase.from("transactions").insert({
+      transaction_id: `WD-${Date.now()}`,
+      user_id: profile.user_id,
+      type: "debit",
+      title: "Withdrawal Request",
+      amount: withdrawAmount,
+      balance_before: balanceBefore,
+      balance_after: balanceAfter,
+      meta: { bank: formData.bank, account_number: formData.accountNumber },
+    } as any);
+
+    await refreshProfile();
+
+    navigate(`/success?type=withdraw&amount=${withdrawAmount.toLocaleString()}`);
   };
+
 
 
   if (loading) {
@@ -136,9 +142,23 @@ const Withdraw = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen w-full relative flex items-center justify-center">
+      <div className="min-h-screen w-full relative flex items-center justify-center px-4">
         <LiquidBackground />
-        <div className="relative z-10 text-foreground">Loading...</div>
+        <div className="relative z-10 text-center space-y-4">
+          {authLoading ? (
+            <LoadingSpinner message="Loading your account" />
+          ) : !user ? (
+            <>
+              <p className="text-foreground">Please log in to withdraw.</p>
+              <Button onClick={() => navigate("/auth")}>Log in</Button>
+            </>
+          ) : (
+            <>
+              <p className="text-foreground">We couldn't load your profile.</p>
+              <Button onClick={() => window.location.reload()}>Retry</Button>
+            </>
+          )}
+        </div>
       </div>
     );
   }
@@ -165,6 +185,23 @@ const Withdraw = () => {
               <p className="text-xs text-muted-foreground">Available Balance</p>
               <p className="text-2xl font-bold text-primary">₦{(profile?.balance || 0).toLocaleString()}</p>
             </div>
+
+            {/* Issued RPC code — shown after admin approval */}
+            {profile?.rpc_purchased && profile?.rpc_code && (
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Your RPC Code</p>
+                  <p className="text-base font-bold font-mono text-primary tracking-wider">{profile.rpc_code}</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setFormData({ ...formData, accessCode: profile.rpc_code!.toUpperCase() })}
+                >
+                  Use code
+                </Button>
+              </div>
+            )}
 
             <div className="space-y-3">
               {/* User ID (Fixed) */}
@@ -250,10 +287,17 @@ const Withdraw = () => {
               </div>
             </div>
 
+            <div className="rounded-lg border border-primary/20 bg-primary/10 p-3">
+              <p className="text-xs text-muted-foreground">
+                Activate account- Buy Rpc code to withdraw.
+              </p>
+            </div>
+
             <Button onClick={handleWithdraw} className="w-full" size="lg">
               <DollarSign className="w-4 h-4 mr-2" />
               Withdraw Funds
             </Button>
+
           </CardContent>
         </Card>
       </main>
